@@ -11,7 +11,7 @@ function _objective_function(w::Array{Float64,1}, ḡ::Array{Float64,1},
 
 
     # TODO: This version of the objective function includes the barrier term, and the penalty terms -
-    f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2) - (1/μ)*sum(_safe_log.(w));
+     f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2) - (1/μ)*sum(_safe_log.(w));
 
     # TODO: This version of the objective function does NOT have the barrier term
     # f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2);
@@ -72,9 +72,37 @@ function solve(model::MySimulatedAnnealingMinimumVariancePortfolioAllocationProb
     while has_converged == false
     
         accepted_counter = 0; 
+        for _ in 1:KL
+        # implement simulated annealing logic here -
+            # generate a new candidate solution
+            candidate_w = current_w + β * randn(length(w));
+
+            # compute the objective function 
+            candidate_f = _objective_function(candidate_w, ḡ, Σ̂, R, μ, ρ);
+
+            # calculate acceptance probability
+            ΔE = candidate_f - current_f
+            p_accept = exp(-ΔE / T)
+            
+            # accept or reject the candidate solution
+            if candidate_f < current_f
+            current_w = candidate_w
+            current_f = candidate_f
+            accepted_counter += 1
+            else
+                if rand() < p_accept
+                    current_w = candidate_w;
+                    current_f = candidate_f;
+                    accepted_counter += 1;
+                end
+            end
         
-        # TODO: Implement simulated annealing logic here -
-        throw(ErrorException("Oooops! Simulated annealing logic not yet implemented!!"));
+            # check if this is the best solution so far
+            if (current_f < f_best)
+                w_best = current_w;
+                f_best = current_f;
+            end
+        end        
 
         # update KL -
         fraction_accepted = accepted_counter/KL; # what is the fraction of accepted moves
